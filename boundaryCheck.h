@@ -96,7 +96,7 @@ struct MACRO_BLOCK_DATA{
 };
 
 
-int boundaryCheck( VideoState *is, AVPicture *pict, const char * input_filename );
+int boundaryCheck( VideoState *is, AVPicture *pict, const char * input_filename, enum MType m_type);
 void open_all_dat_file();
 void close_all_dat_file();
 

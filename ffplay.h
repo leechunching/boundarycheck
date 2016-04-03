@@ -143,6 +143,11 @@ typedef struct VideoState {
     enum ShowMode {
         SHOW_MODE_NONE = -1, SHOW_MODE_VIDEO = 0, SHOW_MODE_WAVES, SHOW_MODE_RDFT, SHOW_MODE_NB
     } show_mode;
+    
+    enum MType {
+        M_TYPE_NONE = -1, M_TYPE_MI = 0, M_TYPE_ISDF, M_TYPE_AID, M_TYPE_MI_JE
+    } M_Type;	
+	
     int16_t sample_array[SAMPLE_ARRAY_SIZE];
     int sample_array_index;
     int last_i_start;

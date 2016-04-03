@@ -485,7 +485,7 @@ int write_all_dat_info( struct MACRO_BLOCK_DATA *this_frame, int one_count, stru
 		y->brightness) ;
 	return 0;
 }
-int boundaryCheck( VideoState *is, AVPicture *pict, const char *input_filename){
+int boundaryCheck( VideoState *is, AVPicture *pict, const char *input_filename, enum MType m_type){
 	static struct MACRO_BLOCK_DATA	this_frame, old_frame;
 	static	int			fCount = 0;
 	int				one_count = 0;

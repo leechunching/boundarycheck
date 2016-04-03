@@ -72,6 +72,7 @@ static int exit_on_mousedown;
 static int loop=1;
 static int framedrop=-1;
 static enum ShowMode show_mode = SHOW_MODE_NONE;
+static enum MType m_type = M_TYPE_NONE;
 
 static int rdftspeed=20;
 #if CONFIG_AVFILTER
@@ -1244,7 +1245,7 @@ static int queue_picture(VideoState *is, AVFrame *src_frame, double pts1, int64_
         vp->target_clock= compute_target_time(vp->pts, is);
 
         is->pictq_size++;
-	      boundaryCheck( is, &pict, input_filename  );
+	      boundaryCheck( is, &pict, input_filename, m_type );
         SDL_UnlockMutex(is->pictq_mutex);
     }
     return 0;
@@ -2717,6 +2718,16 @@ static int opt_input_file(const char *opt, const char *filename)
     return 0;
 }
 
+static int opt_mtype(const char *opt, const char *arg)
+{
+    m_type = !strcmp(arg, "1") ? M_TYPE_MI :
+             !strcmp(arg, "2") ? M_TYPE_ISDF :
+             !strcmp(arg, "3" ) ? M_TYPE_AID  :
+			 !strcmp(arg, "4" ) ? M_TYPE_MI_JE  :
+			 parse_number_or_die(opt, arg, OPT_INT, 0, M_TYPE_MI_JE-1);
+    return 0;
+}
+
 static const OptionDef options[] = {
 #include "cmdutils_common_opts.h"
     { "x", HAS_ARG, {(void*)opt_width}, "force displayed width", "width" },
@@ -2761,6 +2772,9 @@ static const OptionDef options[] = {
     { "showmode", HAS_ARG, {(void*)opt_show_mode}, "select show mode (0 = video, 1 = waves, 2 = RDFT)", "mode" },
     { "default", HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
     { "i", HAS_ARG, {(void *)opt_input_file}, "read specified file", "input_file"},
+    //scott++
+    { "mtype", HAS_ARG, {(void *)opt_mtype}, "methmatic types", "mtype"},	
+    //scott--
     { NULL, },
 };
 
