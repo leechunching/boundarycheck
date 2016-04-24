@@ -106,11 +106,7 @@ int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_B
 			ptr_r = &(this_frame->r_data[ h ][ w ]);
 			ptr_g = &(this_frame->g_data[ h ][ w ]);
 			ptr_b = &(this_frame->b_data[ h ][ w ]);
-#if 0
-			*ptr_r = *ptr_y + ( 1.4075*( *ptr_v - 128 ));
-			*ptr_g = *ptr_y - ( 0.3455*( *ptr_u - 128 )) - ( 0.7169*( *ptr_v - 128 )) ;
-			*ptr_b = *ptr_y + ( 1.779 *( *ptr_u - 128 ));
-#else
+
 			//R= Y+ 1.13983*(V-128)
 			//G= Y-0.39465*(U-128) - 0.58060*(V-128)
 			//B=Y+2.03211*(U-128)
@@ -120,13 +116,6 @@ int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_B
 			if( *ptr_r < 0 ) printf(" r %d\n", *ptr_r );
 			if( *ptr_g < 0 ) printf(" g %d\n", *ptr_g );
 			if( *ptr_b < 0 ) printf(" b %d\n", *ptr_b );
-/*
-		if( (h==180)&&(w==240) ){
-			printf( "-this_y:%d u:%d v:%d\n", *ptr_y, *ptr_u, *ptr_v);
-			printf( "-this_r:%d g:%d b:%d\n", *ptr_r, *ptr_g, *ptr_b);
-		}
-*/
-#endif
                 }
         }
 	// Y's Macro Block total value
@@ -162,8 +151,6 @@ int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_B
 			ptr_r = &(this_frame->r[ h ][ w ]);
 			ptr_g = &(this_frame->g[ h ][ w ]);
 			ptr_b = &(this_frame->b[ h ][ w ]);
-		//if( (h==180)&&(w==240) )	printf( "maxh=%d maxw=%d -this_u:%d-this_v:%d-\n",  this_frame->max_h, this_frame->max_w, this_frame->u[h][w], this_frame->v[h][w]);
-
 			*ptr_y /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
 			*ptr_u /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
 			*ptr_v /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
@@ -224,7 +211,6 @@ int init_ctt( struct MACRO_BLOCK_DATA *this_frame, struct MACRO_BLOCK_DATA *old_
 	p->H2 = this_frame->max_h/2 + JEMI_WIDTH/2;
 	p->W1 = this_frame->max_w/2 - JEMI_WIDTH/2;
 	p->W2 = this_frame->max_w/2 + JEMI_WIDTH/2;
-//if( mode == MODE_S ) printf(" %d %d %d %d\n", p->H1, p->H2, p->W1, p->W2 );
 
 	for ( h = 0 ; h < this_frame->max_h ; h++ ) {
 		for ( w = 0 ; w < this_frame->max_w; w++ ) {
@@ -244,34 +230,6 @@ int init_ctt( struct MACRO_BLOCK_DATA *this_frame, struct MACRO_BLOCK_DATA *old_
 				case MODE_B:
 					i = old_frame->b[h][w];
 					j = this_frame->b[h][w];
-					break;
-				case MODE_S:
-	//		if( mode==MODE_S)	printf(" i=%d j=%d, h=%d w=%d, H1=%d H2=%d W1=%d W2=%d\n", i,j,h,w, p->H1, p->H2, p->W1, p->W2);
-					if(	((h < p->H2) && ( h >= p->H1 ) ) ||
-						((w < p->W2) && ( w >= p->W1 ) ) ){
-							i = old_frame->y[h][w];
-							j = this_frame->y[h][w];
-							//printf(" i=%d j=%d, h=%d w=%d\n", i,j,h,w);
-					}
-					else continue;
-					break;
-				case MODE_SH:
-	//		if( mode==MODE_S)	printf(" i=%d j=%d, h=%d w=%d, H1=%d H2=%d W1=%d W2=%d\n", i,j,h,w, p->H1, p->H2, p->W1, p->W2);
-					if(	((h < p->H2) && ( h >= p->H1 ) ) ){
-							i = old_frame->y[h][w];
-							j = this_frame->y[h][w];
-							//printf(" i=%d j=%d, h=%d w=%d\n", i,j,h,w);
-					}
-					else continue;
-					break;
-				case MODE_SW:
-	//		if( mode==MODE_S)	printf(" i=%d j=%d, h=%d w=%d, H1=%d H2=%d W1=%d W2=%d\n", i,j,h,w, p->H1, p->H2, p->W1, p->W2);
-					if(	((w < p->W2) && ( w >= p->W1 ) ) ){
-							i = old_frame->y[h][w];
-							j = this_frame->y[h][w];
-							//printf(" i=%d j=%d, h=%d w=%d\n", i,j,h,w);
-					}
-					else continue;
 					break;
 				default:
 					printf("%s:Call mode error [%d]\n", __FUNCTION__, mode);
@@ -303,22 +261,18 @@ void cal_je_avg_stdev( struct MACRO_BLOCK_DATA *this_frame, int one_count, struc
 int cal_je_mi( struct MACRO_BLOCK_DATA *this_frame, struct MACRO_BLOCK_DATA *old_frame, int one_count, struct CTT *p, int mode){
 	int	i, j, o, t;
 	float	nume_mi = 0, deno_mi = 0, log_result_mi;	// numerator & denominator
-	float	nume_je=0, nume_hg2=0, nume_hg1=0;
-	float	deno_je=0, deno_hg2=0, deno_hg1=0;
-	float	log_result_je, log_result_hg2, log_result_hg1;	// numerator & denominator
+	float	nume_je=0;
+	float	deno_je=0;
+	float	log_result_je;	// numerator & denominator
 	float	log2 = log(2);
 
-	float	wxh=	( mode == MODE_S )?  (this_frame->max_w + this_frame->max_h ) * JEMI_WIDTH :
-			( mode == MODE_SH)?	this_frame->max_w * JEMI_WIDTH :
-			( mode == MODE_SW)?	this_frame->max_h * JEMI_WIDTH :
-			this_frame->max_h * this_frame->max_w;
+	float	wxh=	this_frame->max_h * this_frame->max_w;
 
 	p->begin = time((time_t*)NULL);
 	for( i = 0; i < 256 ; i++) {
 		for( j = 0; j < 256 ; j++ ){
 			nume_mi = p->table[i][j] / wxh;
 			deno_mi = ( p->t[i] / wxh) * ( p->t1[j] / wxh); 
-	//if( mode == MODE_S) printf("w=%f h=%f wxh=%f\n", nume_mi , deno_mi,wxh );
 
 			if ( deno_mi == 0 || nume_mi == 0) log_result_mi = 0 ;
 			else{
@@ -329,67 +283,54 @@ int cal_je_mi( struct MACRO_BLOCK_DATA *this_frame, struct MACRO_BLOCK_DATA *old
 	}
 	p->end = time((time_t*)NULL);
 
+#if 0//remove JE
 	for( i = 0; i < 256 ; i++) {
 		for( j = 0; j < 256 ; j++ ){
 			nume_je = p->table[i][j] / wxh;
 			deno_je = (p->t[i]/ wxh) * (p->t1[j]/ wxh) ;
 
-			switch( mode ){
-				case MODE_Y:
-					o = old_frame->his_y[j];
-					t = this_frame->his_y[i];
-					break;
-				case MODE_R:
-					o = old_frame->his_r[j];
-					t = this_frame->his_r[i];
-					break;
-				case MODE_G:
-					o = old_frame->his_g[j];
-					t = this_frame->his_g[i];
-					break;
-				case MODE_B:
-					o = old_frame->his_b[j];
-					t = this_frame->his_b[i];
-					break;
-				case MODE_S:
-				case MODE_SH:
-				case MODE_SW:
-					o = old_frame->his_y[j];
-					t = this_frame->his_y[i];
-					break;
-				default:
-					printf("%s:Call mode error!\n", __FUNCTION__);
-			}
-//HG2
-			nume_hg2 = fabsf((t/ wxh) * (o/wxh));
-			deno_hg2 = fabsf((t/ wxh) * (o/wxh));
-//HG1
-			nume_hg1 = fabsf((t - o)/ wxh) ;
-			deno_hg1 = fabsf((t/ wxh) * (o/wxh));
-
 			log_result_je	= (deno_je == 0 || nume_je == 0)?	0 : log( nume_je ) / log2;
-			log_result_hg2	= (deno_hg2 == 0 || nume_hg2 == 0)?	0 : log( nume_hg2 ) / log2;
-			log_result_hg1	= (deno_hg1 == 0 || nume_hg1 == 0)?	0 : log( nume_hg1 ) / log2;
 
 			p->je_org = p->je_org + (nume_je  *  log_result_je);
-			p->je_hg2 = p->je_hg2 + (nume_hg2 *  log_result_hg2);
-			p->je_hg1 = p->je_hg1 + (nume_hg1 *  log_result_hg1);
-		//      	printf( "+++++ct=%d ct+1=%d nume=%f  deno=%f \n", p->t[i], p->t1[j], nume_je, deno_je ) ;
-		//	printf( "++++++c[%d][%d]=%d  nume=%f  log=%f  JE=%f \n", i,j,p->table[i][j],nume_je, log_result_je, p->je_org ) ;
 		} 
 	}
 	p->je_org *= -1;
-	p->je_hg2 *= -1;
-	p->je_hg1 *= -1;
+#endif
+	//p->raw_val = cal_raw_y75( this_frame, mode);
+	//p->brightness = (( 255 - p->raw_val ) + ( 2 *( p->je_org_avg - ( MAX_JE/ 2 )))/MAX_JE) ;
+	//p->brightness = ( p->raw_val );
 
-	cal_je_avg_stdev( this_frame, one_count, p, p->je_org, &(p->je_org_avg), &(p->stdev_org));
-	cal_je_avg_stdev( this_frame, one_count, p, p->je_hg1, &(p->je_hg1_avg), &(p->stdev_hg1));
-	cal_je_avg_stdev( this_frame, one_count, p, p->je_hg2, &(p->je_hg2_avg), &(p->stdev_hg2));
-	p->raw_val = cal_raw_y75( this_frame, mode);
-	p->brightness = (( 255 - p->raw_val ) + ( 2 *( p->je_org_avg - ( MAX_JE/ 2 )))/MAX_JE) ;
 	return 0;
 }
+int cal_histogram( struct MACRO_BLOCK_DATA *this_frame, struct MACRO_BLOCK_DATA *old_frame){
+	int	i, o, t;
+	float diff_hg=0, nume_ai_t=0, nume_ai_o=0, deno_ai_t=0, deno_ai_o=0;
+	float nume_sum_ai_t=0, nume_sum_ai_o=0, deno_sum_ai_t=0, deno_sum_ai_o=0;
+	
+	for( i = 0; i < 256 ; i++) {
+		
+		o = old_frame->his_y[i];
+		t = this_frame->his_y[i];
 
+		//summarize HG difference, Di
+		diff_hg = fabsf(t - o);
+		this_frame->hg_d = this_frame->hg_d + diff_hg;
+		
+		
+		//summarize (nume and deno) ofHG intensity AI 
+		nume_ai_t = i*t;
+		nume_ai_o = i*o;
+		nume_sum_ai_t = nume_sum_ai_t + nume_ai_t;
+		//nume_sum_ai_o = nume_sum_ai_o + nume_ai_o;
+		deno_sum_ai_t = deno_sum_ai_t + t;
+		//deno_sum_ai_o = deno_sum_ai_o + o;
+	}
+	
+	//Calculate AID (Average Intensity Difference)
+	this_frame->hg_ai = (nume_sum_ai_t/deno_sum_ai_t);
+	//printf( "FRAME=%d, HG_D=%f, HG_AID=%f \n",this_frame->frameNum, this_frame->hg_d, this_frame->hg_aid) ;
+	return 0;
+}
 
 int diff_frame( VideoState *is, struct MACRO_BLOCK_DATA *this_frame, struct MACRO_BLOCK_DATA *old, int limit,  int writeFlag){
 	static int	zero_count_old=0;
@@ -416,117 +357,73 @@ int diff_frame( VideoState *is, struct MACRO_BLOCK_DATA *this_frame, struct MACR
 }
 
 
-void cal_je_avg_stdev( struct MACRO_BLOCK_DATA *this_frame, int one_count, struct CTT *p, float je_org, float *je_avg, float *stdev){
-	int		i;
-	float 		point50 = this_frame -> max_w * this_frame -> max_h/2 ;
 
-        //==========oneCount > 50point readdJE=============
-	//(( 255 - raw_y ) *(?) ( 2 * ( Avg_JE - ( Max_JE/2 ) ) )) / Max_JE
-        float rv = 0 ;
-        float tmp_Avg_JE = 0 ;
-        int tmp_JEcount = 0 ;
-
-	*stdev = 0;
-	if ( one_count >= point50 ) {
-		memset( p->je_array, 0, sizeof( float) * JE_ARRAY_SIZE); //JE_ARRAY_SIZE = 5000
-		p->je_count= 1 ; 
-		p->je_total= je_org;
-		p->je_array[0] = je_org;
-		*je_avg= p->je_total/ p->je_count;
-	} 
-	else {
-		p->je_count++ ;
-		p->je_total += je_org;
-		p->je_array[p->je_count-1] = je_org;
-		*je_avg= p->je_total/ p->je_count;
-		tmp_Avg_JE = *je_avg;
-		tmp_JEcount = p->je_count;
-
-		if ( p->je_count> JE_ARRAY_SIZE ) printf ( "*+*+*+*+*+*+JEarray_too_small+*+*+*+*+*+*+*\n" ) ;
-		for ( i = 0 ; i < p->je_count ; i++ ) {
-			rv =  p->je_array[i] - tmp_Avg_JE ;
-			rv = rv * rv ;
-			*stdev += rv ;
-		} 
-		*stdev = sqrt( *stdev / p->je_count);
-	//	printf( "*+*+stdev[%f],JE[%f],JEcount[%d],Avg_JE[%f],OneCount[%d]+*+*+*\n", *stdev, je_org, je_count, *je_avg,one_count ) ;
-	} 
-}
-int write_dat_info( struct MACRO_BLOCK_DATA *this_frame, int one_count, struct CTT *p, int mode, FILE *fd){
-	if( this_frame->frameNum == 0 )
-		fprintf( fd, "%s", "Num,ONE,Y_MI,Y_JE,Y_HG1,Y_HG2,RGB_MI,RGB_JE,RGB_HG1,RGB_HG2,Brightness\n" );
-	fprintf( fd, "%-6d, %d,%f,%f,%f,%f,%f,%f\n", this_frame->frameNum, one_count,
-		 p->mi, p->je_org, p->je_hg1, p->je_hg2, p->brightness, p->stdev_org) ;
-	
-	return 0;
-}
-int write_all_dat_info( struct MACRO_BLOCK_DATA *this_frame, int one_count, struct CTT *y, struct CTT *r, struct CTT *g, struct CTT *b, struct CTT *s, struct CTT *sh, struct CTT *sw, FILE *fd ){
-	if( this_frame->frameNum == 0 )
-		fprintf( fd, "%s", "Num,ONE,Y_MI,Y_JE,Y_HG1,Y_HG2,RGB_MI,RGB_JE,RGB_HG1,RGB_HG2,S_MI,S_JE,S_HG1,S_HG2,SH_MI,SH_JE,SH_HG1,SH_HG2,SW_MI,SW_JE,SW_HG1,SW_HG2,Brightness\n" );
-/*
-	printf( "%f,%f,%f,%f,%f,%f,%f,%f,%d,%f\n",
-		y->mi, y->je_org, y->je_hg1, y->je_hg2,
-		r->mi + g->mi + b->mi,
-		r->je_org + g->je_org + b->je_org,
-		r->je_hg1 + g->je_hg1 + b->je_hg1,
-		r->je_hg2 + g->je_hg2 + b->je_hg2,
-		one_count, y->brightness) ;
-*/
-	fprintf( fd, "%-6d, %d, %f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f, %f,%f,%f,%f,%f,%f,%f,%f\n",
+int write_all_dat_info( struct MACRO_BLOCK_DATA *this_frame, int one_count, struct CTT *r, struct CTT *g, struct CTT *b, float duration, FILE *fd ){
+	if( this_frame->frameNum == 1 )
+		fprintf( fd, "%s", "Num,ONE,RGB_MI,Brightness,Y_Slope,HG_DIFF,HG_AI,Duration\n" );
+	fprintf( fd, "%-6d, %d, %f,%f,%f,%f,%f,%f\n",
 		this_frame->frameNum, one_count,
-		y->mi, y->je_org, y->je_hg1, y->je_hg2,
 		r->mi + g->mi + b->mi,
-		r->je_org + g->je_org + b->je_org,
-		r->je_hg1 + g->je_hg1 + b->je_hg1,
-		r->je_hg2 + g->je_hg2 + b->je_hg2,
-		s->mi, s->je_org, s->je_hg1, s->je_hg2,
-		sh->mi, sh->je_org, sh->je_hg1, sh->je_hg2,
-		sw->mi, sw->je_org, sw->je_hg1, sw->je_hg2,
-		y->brightness) ;
+		this_frame->brightness, this_frame->slope_brightness, 
+		this_frame->hg_d, this_frame->hg_ai,duration) ;
 	return 0;
+}
+
+float cal_slope_y( struct MACRO_BLOCK_DATA *this_frame, struct MACRO_BLOCK_DATA *old_frame){
+	
+	float slope_brightness;
+	slope_brightness = (this_frame->brightness - old_frame->brightness) ;
+	return slope_brightness;
+
+
+	} 
+	
+float timedifference_msec(struct timeval t0, struct timeval t1)
+{
+    return (t1.tv_sec - t0.tv_sec) * 1000.0f + (t1.tv_usec - t0.tv_usec) / 1000.0f;
 }
 int boundaryCheck( VideoState *is, AVPicture *pict, const char *input_filename, enum MType m_type){
 	static struct MACRO_BLOCK_DATA	this_frame, old_frame;
 	static	int			fCount = 0;
 	int				one_count = 0;
 	struct CTT			ctt_y, ctt_r, ctt_g, ctt_b, ctt_s, ctt_sh, ctt_sw;
-
+	float slope_y;
+	struct timeval t0;
+	struct timeval t1;
+	float elapsed;
 	memset( &this_frame, 0, sizeof( struct MACRO_BLOCK_DATA ) );
-	total_begin = time((time_t*)NULL);
 
-	// Onecount Algorithm
-	block_luminance_calculation( is, pict, &this_frame, fCount++ );
+	if (m_type == M_TYPE_ISDF){
+		gettimeofday(&t0, 0);
+		block_luminance_calculation( is, pict, &this_frame, ++fCount );		
   	one_count = diff_frame( is, &this_frame, &old_frame, DIFF_LIMIT, 1);
-	
-	// JE/MI Algorithm
-	init_ctt( &this_frame, &old_frame, &ctt_y, MODE_Y );
+  		this_frame.brightness = cal_raw_y75( &this_frame, MODE_Y);
+		this_frame.slope_brightness = cal_slope_y(&this_frame,&old_frame);	  		
+		gettimeofday(&t1, 0);
+		elapsed = timedifference_msec(t0, t1);
+		//printf("Code executed in %f milliseconds.\n", elapsed);
+  	}else if (m_type == M_TYPE_MI){
+  		gettimeofday(&t0, 0);
+  		block_luminance_calculation( is, pict, &this_frame, ++fCount );			
 	init_ctt( &this_frame, &old_frame, &ctt_r, MODE_R );
 	init_ctt( &this_frame, &old_frame, &ctt_g, MODE_G );
 	init_ctt( &this_frame, &old_frame, &ctt_b, MODE_B );
-	init_ctt( &this_frame, &old_frame, &ctt_s, MODE_S );
-	init_ctt( &this_frame, &old_frame, &ctt_sh, MODE_SH );
-	init_ctt( &this_frame, &old_frame, &ctt_sw, MODE_SW );
-
-	cal_je_mi( &this_frame, &old_frame, one_count, &ctt_y, MODE_Y );
 	cal_je_mi( &this_frame, &old_frame, one_count, &ctt_r, MODE_R );
 	cal_je_mi( &this_frame, &old_frame, one_count, &ctt_g, MODE_G );
 	cal_je_mi( &this_frame, &old_frame, one_count, &ctt_b, MODE_B );
-	cal_je_mi( &this_frame, &old_frame, one_count, &ctt_s, MODE_S );
-	cal_je_mi( &this_frame, &old_frame, one_count, &ctt_sh, MODE_SH );
-	cal_je_mi( &this_frame, &old_frame, one_count, &ctt_sw, MODE_SW );
+		gettimeofday(&t1, 0);
+		elapsed = timedifference_msec(t0, t1);	
+		//printf("Code executed in %f milliseconds.\n", elapsed);				
+  	}else if (m_type == M_TYPE_AID){
+  		gettimeofday(&t0, 0);
+  		block_luminance_calculation( is, pict, &this_frame, ++fCount );	
+  		cal_histogram( &this_frame, &old_frame);
+  		gettimeofday(&t1, 0);
+  		elapsed = timedifference_msec(t0, t1);
+  	}
 
-	total_end = time((time_t*)NULL);
 
-	//cal_running_time();
-
-
-	write_dat_info( &this_frame, one_count, &ctt_y, MODE_Y, fd_y);
-	write_dat_info( &this_frame, one_count, &ctt_r, MODE_R, fd_r);
-	write_dat_info( &this_frame, one_count, &ctt_g, MODE_G, fd_g);
-	write_dat_info( &this_frame, one_count, &ctt_b, MODE_B, fd_b);
-	write_dat_info( &this_frame, one_count, &ctt_s, MODE_S, fd_s);
-	write_all_dat_info( &this_frame, one_count, &ctt_y, &ctt_r, &ctt_g, &ctt_b, &ctt_s, &ctt_sh, &ctt_sw, fd_all);
-
+	write_all_dat_info( &this_frame, one_count, &ctt_r, &ctt_g, &ctt_b, elapsed, fd_all);
 	memcpy( &old_frame, &this_frame, sizeof( struct MACRO_BLOCK_DATA ) );
 	return 0;
 }

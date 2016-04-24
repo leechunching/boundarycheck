@@ -2725,6 +2725,7 @@ static int opt_mtype(const char *opt, const char *arg)
              !strcmp(arg, "3" ) ? M_TYPE_AID  :
 			 !strcmp(arg, "4" ) ? M_TYPE_MI_JE  :
 			 parse_number_or_die(opt, arg, OPT_INT, 0, M_TYPE_MI_JE-1);
+    printf("opt_mtype, m_type=%d\n", m_type);
     return 0;
 }
 

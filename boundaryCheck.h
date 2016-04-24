@@ -78,6 +78,8 @@ struct MACRO_BLOCK_DATA{
 	unsigned char		g_data[ MACRO_BLOCK_MAX_HEIGHT ][ MACRO_BLOCK_MAX_WIDTH ];
 	unsigned char		b_data[ MACRO_BLOCK_MAX_HEIGHT ][ MACRO_BLOCK_MAX_WIDTH ];
 	unsigned int    	isBoundary;
+	float 			brightness;
+	float			slope_brightness;
 	//unsigned int 		 zeroCount;
 	int			max_h;
 	int			max_w;
@@ -93,6 +95,7 @@ struct MACRO_BLOCK_DATA{
 	unsigned int		his_g[ YUV_SIZE ];
 	unsigned int		his_b[ YUV_SIZE ];
 	unsigned int		his_s[ YUV_SIZE ];
+	float   hg_d, hg_ai;	
 };
 
 
