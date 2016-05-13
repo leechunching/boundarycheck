@@ -71,7 +71,7 @@ void close_all_dat_file(){
     fclose( fd_all ) ;
 }
 
-int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_BLOCK_DATA *this_frame, int count ){
+int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_BLOCK_DATA *this_frame, int count, int Yonly ){
 	unsigned char	*y = pict->data[0];
 	unsigned char	*u = pict->data[1];
 	unsigned char	*v = pict->data[2];
@@ -88,55 +88,57 @@ int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_B
 
 
 	memset( this_frame->y, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
-	memset( this_frame->u, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
-        memset( this_frame->v, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
-	memset( this_frame->r, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
-	memset( this_frame->g, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
-	memset( this_frame->b, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
+	if( !Yonly ){
+		memset( this_frame->u, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
+       		memset( this_frame->v, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
+		memset( this_frame->r, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
+		memset( this_frame->g, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
+		memset( this_frame->b, 0, sizeof(int )* MACRO_BLOCK_MAX_HEIGHT * MACRO_BLOCK_MAX_WIDTH );
+	        // V's Macro Block total value
+		for( h = 0; h < height; h++){
+	                for( w = 0; w < width; w++ ){
+				unsigned char *ptr_y, *ptr_u, *ptr_v;
+				unsigned char *ptr_r, *ptr_g, *ptr_b;
 
-        // V's Macro Block total value
-        for( h = 0; h < height; h++){
-                for( w = 0; w < width; w++ ){
-			unsigned char *ptr_y, *ptr_u, *ptr_v;
-			unsigned char *ptr_r, *ptr_g, *ptr_b;
+				ptr_y = y+ h*width+w;
+				ptr_u = u+ ((h*width)>>2) + (w>>1);
+				ptr_v = v+ ((h*width)>>2) + (w>>1);
+				ptr_r = &(this_frame->r_data[ h ][ w ]);
+				ptr_g = &(this_frame->g_data[ h ][ w ]);
+				ptr_b = &(this_frame->b_data[ h ][ w ]);
 
-			ptr_y = y+ h*width+w;
-			ptr_u = u+ ((h*width)>>2) + (w>>1);
-			ptr_v = v+ ((h*width)>>2) + (w>>1);
-			ptr_r = &(this_frame->r_data[ h ][ w ]);
-			ptr_g = &(this_frame->g_data[ h ][ w ]);
-			ptr_b = &(this_frame->b_data[ h ][ w ]);
-
-			//R= Y+ 1.13983*(V-128)
-			//G= Y-0.39465*(U-128) - 0.58060*(V-128)
-			//B=Y+2.03211*(U-128)
-			*ptr_r = *ptr_y + ( 1.13983 * ( *ptr_v - (float)128 ));
-			*ptr_g = *ptr_y - ( 0.39465 * ( *ptr_u - (float)128 )) - ( 0.58060*( *ptr_v - (float)128 )) ;
-			*ptr_b = *ptr_y + ( 2.03211 * ( *ptr_u - (float)128 ));
-			if( *ptr_r < 0 ) printf(" r %d\n", *ptr_r );
-			if( *ptr_g < 0 ) printf(" g %d\n", *ptr_g );
-			if( *ptr_b < 0 ) printf(" b %d\n", *ptr_b );
-                }
-        }
+				//R= Y+ 1.13983*(V-128)
+				//G= Y-0.39465*(U-128) - 0.58060*(V-128)
+				//B=Y+2.03211*(U-128)
+				*ptr_r = *ptr_y + ( 1.13983 * ( *ptr_v - (float)128 ));
+				*ptr_g = *ptr_y - ( 0.39465 * ( *ptr_u - (float)128 )) - ( 0.58060*( *ptr_v - (float)128 )) ;
+				*ptr_b = *ptr_y + ( 2.03211 * ( *ptr_u - (float)128 ));
+				if( *ptr_r < 0 ) printf(" r %d\n", *ptr_r );
+				if( *ptr_g < 0 ) printf(" g %d\n", *ptr_g );
+				if( *ptr_b < 0 ) printf(" b %d\n", *ptr_b );
+			}
+		}
+	}
 	// Y's Macro Block total value
-                        //yuv_h = ( h / 2 ) * 2 ;
-                        //yuv_w = w / 2 ;
-                        //*tmp_v  += *( v+ yuv_h + yuv_w );
+	//yuv_h = ( h / 2 ) * 2 ;
+	//yuv_w = w / 2 ;
+	//*tmp_v  += *( v+ yuv_h + yuv_w );
 	for( h = 0; h < height; h++){
 		for( w = 0; w < width; w++ ){
 			unsigned int *tmp_y  = &(this_frame->y[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
-                        unsigned int *tmp_u = &(this_frame->u[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
-                        unsigned int *tmp_v = &(this_frame->v[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
-			unsigned int *tmp_r  = &(this_frame->r[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
-                        unsigned int *tmp_g = &(this_frame->g[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
-                        unsigned int *tmp_b = &(this_frame->b[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
 			*tmp_y  += *( y+ h*width+w) ;
-			*tmp_u  += *( u+ ((h*width)>>2) + (w>>1) );
-			*tmp_v  += *( v+ ((h*width)>>2) + (w>>1) ) ;
-			*tmp_r  += this_frame->r_data[ h ][ w ];
-			*tmp_g  += this_frame->g_data[ h ][ w ];
-			*tmp_b  += this_frame->b_data[ h ][ w ];
-
+			if( !Yonly ){
+	                        unsigned int *tmp_u = &(this_frame->u[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
+				unsigned int *tmp_v = &(this_frame->v[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
+				unsigned int *tmp_r  = &(this_frame->r[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
+				unsigned int *tmp_g = &(this_frame->g[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
+				unsigned int *tmp_b = &(this_frame->b[ h/BLOCK_SIZE_H ][ w/BLOCK_SIZE_W ]);
+				*tmp_u  += *( u+ ((h*width)>>2) + (w>>1) );
+				*tmp_v  += *( v+ ((h*width)>>2) + (w>>1) ) ;
+				*tmp_r  += this_frame->r_data[ h ][ w ];
+				*tmp_g  += this_frame->g_data[ h ][ w ];
+				*tmp_b  += this_frame->b_data[ h ][ w ];
+			}
                 }
         }
 	// Y's Macro Block average 
@@ -146,24 +148,26 @@ int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_B
 			unsigned int *ptr_r, *ptr_g, *ptr_b;
 
 			ptr_y = &(this_frame->y[ h ][ w ]);
-			ptr_u = &(this_frame->u[ h ][ w ]);
-			ptr_v = &(this_frame->v[ h ][ w ]);
-			ptr_r = &(this_frame->r[ h ][ w ]);
-			ptr_g = &(this_frame->g[ h ][ w ]);
-			ptr_b = &(this_frame->b[ h ][ w ]);
 			*ptr_y /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
-			*ptr_u /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
-			*ptr_v /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
-			*ptr_r /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
-			*ptr_g /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
-			*ptr_b /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
-
 			if ( (*ptr_y >= 0) && ( *ptr_y < YUV_SIZE) ) this_frame->his_y[ *ptr_y ]++;
-			if ( (*ptr_u >= 0) && ( *ptr_u < YUV_SIZE) ) this_frame->his_u[ *ptr_u ]++;
-			if ( (*ptr_v >= 0) && ( *ptr_v < YUV_SIZE) ) this_frame->his_v[ *ptr_v ]++;
-			if ( (*ptr_r >= 0) && ( *ptr_r <YUV_SIZE) ) this_frame->his_r[ *ptr_r ]++;
-			if ( (*ptr_g >= 0) && ( *ptr_g <YUV_SIZE) ) this_frame->his_g[ *ptr_g ]++;
-			if ( (*ptr_b >= 0) && ( *ptr_b <YUV_SIZE) ) this_frame->his_b[ *ptr_b ]++;
+			if( !Yonly ){
+				ptr_u = &(this_frame->u[ h ][ w ]);
+				ptr_v = &(this_frame->v[ h ][ w ]);
+				ptr_r = &(this_frame->r[ h ][ w ]);
+				ptr_g = &(this_frame->g[ h ][ w ]);
+				ptr_b = &(this_frame->b[ h ][ w ]);
+				*ptr_u /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
+				*ptr_v /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
+				*ptr_r /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
+				*ptr_g /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
+				*ptr_b /= ( BLOCK_SIZE_H * BLOCK_SIZE_W );
+
+				if ( (*ptr_u >= 0) && ( *ptr_u < YUV_SIZE) ) this_frame->his_u[ *ptr_u ]++;
+				if ( (*ptr_v >= 0) && ( *ptr_v < YUV_SIZE) ) this_frame->his_v[ *ptr_v ]++;
+				if ( (*ptr_r >= 0) && ( *ptr_r <YUV_SIZE) ) this_frame->his_r[ *ptr_r ]++;
+				if ( (*ptr_g >= 0) && ( *ptr_g <YUV_SIZE) ) this_frame->his_g[ *ptr_g ]++;
+				if ( (*ptr_b >= 0) && ( *ptr_b <YUV_SIZE) ) this_frame->his_b[ *ptr_b ]++;
+			}
 		}
 	}
 	this_frame->frameNum	= count;
@@ -395,7 +399,7 @@ int boundaryCheck( VideoState *is, AVPicture *pict, const char *input_filename, 
 
 	if (m_type == M_TYPE_ISDF){
 		gettimeofday(&t0, 0);
-		block_luminance_calculation( is, pict, &this_frame, ++fCount );		
+		block_luminance_calculation( is, pict, &this_frame, ++fCount, 1 );	
   	one_count = diff_frame( is, &this_frame, &old_frame, DIFF_LIMIT, 1);
   		this_frame.brightness = cal_raw_y75( &this_frame, MODE_Y);
 		this_frame.slope_brightness = cal_slope_y(&this_frame,&old_frame);	  		
@@ -404,7 +408,7 @@ int boundaryCheck( VideoState *is, AVPicture *pict, const char *input_filename, 
 		//printf("Code executed in %f milliseconds.\n", elapsed);
   	}else if (m_type == M_TYPE_MI){
   		gettimeofday(&t0, 0);
-  		block_luminance_calculation( is, pict, &this_frame, ++fCount );			
+  		block_luminance_calculation( is, pict, &this_frame, ++fCount, 0 );
 	init_ctt( &this_frame, &old_frame, &ctt_r, MODE_R );
 	init_ctt( &this_frame, &old_frame, &ctt_g, MODE_G );
 	init_ctt( &this_frame, &old_frame, &ctt_b, MODE_B );
@@ -416,7 +420,7 @@ int boundaryCheck( VideoState *is, AVPicture *pict, const char *input_filename, 
 		//printf("Code executed in %f milliseconds.\n", elapsed);				
   	}else if (m_type == M_TYPE_AID){
   		gettimeofday(&t0, 0);
-  		block_luminance_calculation( is, pict, &this_frame, ++fCount );	
+  		block_luminance_calculation( is, pict, &this_frame, ++fCount, 0 );
   		cal_histogram( &this_frame, &old_frame);
   		gettimeofday(&t1, 0);
   		elapsed = timedifference_msec(t0, t1);
