@@ -171,23 +171,6 @@ int block_luminance_calculation( VideoState *is, AVPicture *pict, struct MACRO_B
 		}
 	}
 	this_frame->frameNum	= count;
-#define CDF_ENABLE 1
-#ifdef CDF_ENABLE
-#define CDF_TARGET 85
-	// Cumulative Distribution Fucntion CDF
-	int cdf_target = this_frame->max_h * this_frame->max_w * CDF_TARGET /100;
-	int cdf_calculator = 0;
-	for( h = 0 ; h< YUV_SIZE; h++ ){
-		cdf_calculator += this_frame->his_y[ h ];
-	//	printf("his_y[%d] = %d\n", h,  this_frame->his_y[ h ] );
-		if( cdf_calculator > cdf_target ){
-			break;
-		}
-	}
-	printf("%s) 70% Y histogram bin = %d (cal=%d, target=%d, x=%d, y=%d)\n", __FUNCTION__, h, cdf_calculator, cdf_target,
-		 this_frame->max_h, this_frame->max_w ,CDF_TARGET);
-	
-#endif
 	return 0;
 }
 int cal_raw_y75( struct MACRO_BLOCK_DATA *this_frame, int mode){
@@ -413,6 +396,7 @@ int boundaryCheck( VideoState *is, AVPicture *pict, const char *input_filename, 
 	struct timeval t1;
 	float elapsed;
 	memset( &this_frame, 0, sizeof( struct MACRO_BLOCK_DATA ) );
+
 	if (m_type == M_TYPE_ISDF){
 		gettimeofday(&t0, 0);
 		block_luminance_calculation( is, pict, &this_frame, ++fCount, 1 );	

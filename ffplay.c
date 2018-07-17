@@ -485,7 +485,7 @@ static void video_image_display(VideoState *is)
                 sp = &is->subpq[is->subpq_rindex];
 
                 if (vp->pts >= sp->pts + ((float) sp->sub.start_display_time / 1000)) {
-                    SDL_LockYUVOverlay (vp->bmp);
+                    //SDL_LockYUVOverlay (vp->bmp);
 
                     pict.data[0] = vp->bmp->pixels[0];
                     pict.data[1] = vp->bmp->pixels[2];
@@ -499,7 +499,7 @@ static void video_image_display(VideoState *is)
                         blend_subrect(&pict, sp->sub.rects[i],
                                       vp->bmp->w, vp->bmp->h);
 
-                    SDL_UnlockYUVOverlay (vp->bmp);
+                    //SDL_UnlockYUVOverlay (vp->bmp);
                 }
             }
         }
@@ -519,7 +519,7 @@ static void video_image_display(VideoState *is)
         rect.y = is->ytop  + y;
         rect.w = FFMAX(width,  1);
         rect.h = FFMAX(height, 1);
-        SDL_DisplayYUVOverlay(vp->bmp, &rect);
+ //       SDL_DisplayYUVOverlay(vp->bmp, &rect);
     }
 }
 
@@ -1245,7 +1245,9 @@ static int queue_picture(VideoState *is, AVFrame *src_frame, double pts1, int64_
         vp->target_clock= compute_target_time(vp->pts, is);
 
         is->pictq_size++;
-	      boundaryCheck( is, &pict, input_filename, m_type );
+       printf("wx h =%d x %d\n", vp->width, vp->height);
+       //boundaryCheck( is, &pict, input_filename, m_type );
+       boundaryCheck( vp->width, vp->height, &pict, m_type );
         SDL_UnlockMutex(is->pictq_mutex);
     }
     return 0;
